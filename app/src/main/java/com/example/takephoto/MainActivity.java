@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,6 +23,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.yalantis.ucrop.UCrop;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +35,10 @@ public class MainActivity extends AppCompatActivity {
    * requestCode 请求权限
    **/
   public final static int PERMISSION_REQUEST_TAKE_PHOTO = 2000;
+  public static final int REQUEST_CODE_RC_CROP = 0x002;
   public static final int REQUEST_CODE_OPEN_CAMERA = 0x100;
   public static final int REQUEST_CODE_OPEN_CAMERA_CROP = 0x101;
-  public static final int REQUEST_CODE_RC_CROP = 0x102;
+  public static final int REQUEST_CODE_OPEN_CAMERA_CROP_OTHER = 0x102;
   private Context mContext;
   private ArrayList<String> mPermissions = new ArrayList<>();
   private Uri tempUri;
@@ -123,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void openCameraCropOther() {
-
+    openCamera(REQUEST_CODE_OPEN_CAMERA_CROP_OTHER);
   }
 
   @Override
@@ -171,7 +175,15 @@ public class MainActivity extends AppCompatActivity {
           }
         }
         break;
-
+      case REQUEST_CODE_OPEN_CAMERA_CROP_OTHER:
+        //拍照使用第三方裁剪uCrop
+        Log.e(TAG, "拍照使用第三方裁剪uCrop: " + tempUri);
+        if (resultCode == Activity.RESULT_OK) {
+          if (tempUri != null) {
+            startCrop(tempUri);
+          }
+        }
+        break;
       case REQUEST_CODE_OPEN_CAMERA_CROP:
         //裁剪的输出 Uri 必须使用 Uri.fromFile(File file) ,否则会系统会提示无法保存经过裁剪的照片
         Uri outPutUriFromFile = Uri.fromFile(new File(UriParse.parseOwnUri(MainActivity.this, tempUri)));
@@ -189,8 +201,23 @@ public class MainActivity extends AppCompatActivity {
           Toast.makeText(mContext, getString(R.string.cancel), Toast.LENGTH_SHORT).show();
         }
         break;
-    }
+      case UCrop.REQUEST_CROP:
+        if (resultCode == RESULT_OK) {
+          final Uri resultUri = UCrop.getOutput(data);
+          Log.e(TAG, "使用uCrop裁剪之后: " + resultUri);
+        } else if (resultCode == UCrop.RESULT_ERROR) {
+          final Throwable cropError = UCrop.getError(data);
+          Log.e(TAG, "使用uCrop裁剪cropError: " + cropError);
 
+        }
+        break;
+
+    }
+  }
+
+  private void startCrop(@NonNull Uri uri) {
+    UCrop uCrop = UCrop.of(uri, Uri.fromFile(new File(getCacheDir(), "SampleCropImage.jpg")));
+    uCrop.start(MainActivity.this);
   }
 
 
